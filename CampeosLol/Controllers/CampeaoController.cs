@@ -1,3 +1,6 @@
+using AutoMapper;
+using CampeoesLol.Data;
+using CampeoesLol.Data.Dtos;
 using CampeosLol.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,25 +10,36 @@ namespace CampeosLol.Controllers
     [Route("[controller]")]
     public class CampeaoController : ControllerBase
     {
-        private static List<Campeao> campeoes = new List<Campeao>();
+        private CampeaoContext _context;
+        private IMapper _mapper;
+
+        public CampeaoController(CampeaoContext context, IMapper mapper)
+        {
+            _context = context;
+            _mapper = mapper;
+        }
 
         [HttpPost]
-        public void AdicionaCampeao([FromBody]Campeao campeao)
+        public IActionResult AdicionaCampeao([FromBody] CreateCampeaoDto campeaoDto)
         {
-            campeoes.Add(campeao);
-            Console.WriteLine(campeao.Nome);
+            Campeao campeao = _mapper.Map<Campeao>(campeaoDto);
+            _context.Campeoes.Add(campeao);
+            _context.SaveChanges();
+            return CreatedAtAction(nameof(RecuperaCampeaoPorNome), new { nome = campeao.Nome }, campeao);
         }
 
         [HttpGet]
-        public IEnumerable<Campeao> ListaCampeos() 
+        public IEnumerable<Campeao> ListaCampeos([FromQuery] int skip = 0, [FromQuery] int take = 20) 
         {
-            return campeoes;
+            return _context.Campeoes.Skip(skip).Take(take);
         }
 
         [HttpGet("{nome}")]
-        public Campeao? RecuperaCampeaoPorNome (string nome)
+        public IActionResult RecuperaCampeaoPorNome (string nome)
         {
-            return campeoes.FirstOrDefault(campeao => campeao.Nome == nome);
+            var campeao = _context.Campeoes.FirstOrDefault(campeao => campeao.Nome == nome);
+            if (campeao == null) return NotFound();
+            return Ok(campeao);
         }
     }
 }
